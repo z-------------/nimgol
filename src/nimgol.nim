@@ -21,10 +21,7 @@ type
     buf: ref Board
 
 template size(board: Board): tuple[w, h: int] =
-  let
-    w = board[0].len
-    h = board.len
-  (w, h)
+  (board[0].len, board.len)
 
 template size(s: Stepper): tuple[w, h: int] =
   s.board[].size
@@ -150,10 +147,6 @@ template loop(count = -1; cb: (proc ())): untyped =
     for _ in 0..<count:
       cb()
 
-template sleep(t: int): untyped =
-  if t > 0:
-    sleep(t)
-
 template intParam(idx: int; default: int): int =
   if paramCount() >= idx:
     paramStr(idx).parseInt()
@@ -167,12 +160,17 @@ template strParam(idx: int; default: string): string =
     default
 
 when isMainModule:
+  # parse args
+
   let
     fn = strParam(1, "")
     n = intParam(2, -1)
     t = intParam(3, 0)
     oi = intParam(4, 0)
     oj = intParam(5, 0)
+
+  # handle args
+
   var s = newStepper(terminalWidth() div 2, terminalHeight() - 1)
 
   if fn.len > 0:
@@ -180,10 +178,18 @@ when isMainModule:
     s.board[].pat(oi, oj, f)
     f.close()
 
+  let sleep =
+    if t > 0:
+      (proc () = sleep(t))
+    else:
+      (proc () = discard)
+    
+  # loop
+
   echo s
   stdout.hideCursor()
   loop(n) do:
-    sleep(t)
+    sleep()
     s.step()
     stdout.cursorUp(s.size.h)
     stdout.setCursorXPos(0)

@@ -127,7 +127,7 @@ template pat(board: var Board; oi, oj: int; f: File) =
     reprLines = newSeq[string]()
     i, j: int
   for line in f.lines:
-    if line[0] == '!': continue
+    if line.len != 0 and line[0] == '!': continue
     let m = line.match(pat)
     if m.isSome:
       let caps = m.get.captures

@@ -90,14 +90,12 @@ proc step(s: var Stepper) =
       let
         cell = s.board[i][j]
         n = s.board[].neighborCount(i, j)
-      if cell == 1 and n == 2 or n == 3:
-        # Any live cell with two or three live neighbours survives.
-        s.buf[i][j] = 1
-      elif cell == 0 and n == 3:
-        # Any dead cell with three live neighbours becomes a live cell.
+      # Any live cell with two or three live neighbours survives.
+      # Any dead cell with three live neighbours becomes a live cell.
+      # All other live cells die in the next generation. Similarly, all other dead cells stay dead.
+      if (cell == 1 and n == 2) or n == 3:
         s.buf[i][j] = 1
       else:
-        # All other live cells die in the next generation. Similarly, all other dead cells stay dead.
         s.buf[i][j] = 0
   swap(s.board, s.buf)
 

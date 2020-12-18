@@ -146,5 +146,6 @@ when isMainModule:
     sleep()
     s.step()
     app.drawBoard(s.board, s.buf)
+    c += 1
   
   exitSdl(app)

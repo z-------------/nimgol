@@ -1,19 +1,94 @@
 import strutils
 import os
-import terminal
-import nre
+import sdl2 as sdl
+import winim/lean
 
 import ./board
 
-# main #
+const CellSize = 10
 
-template loop(count = -1; cb: (proc ())): untyped =
-  if count == -1:
-    while true:
-      cb()
-  else:
-    for _ in 0..<count:
-      cb()
+# SDL stuff
+
+let
+  screenW = GetSystemMetrics(SM_CXSCREEN)
+  screenH = GetSystemMetrics(SM_CYSCREEN)
+  # screenW = 700
+  # screenH = 500
+  boardW = (screenW - 100) div CellSize
+  boardH = (screenH - 100) div CellSize
+  windowW = boardW * CellSize
+  windowH = boardH * CellSize
+
+const
+  Title = "nimgol"
+  WindowFlags = 0
+  RendererFlags = sdl.RendererAccelerated or sdl.RendererPresentVsync
+
+# global rect used for drawing cells
+var rect: sdl.Rect
+rect.w = CellSize
+rect.h = CellSize
+
+type
+  App = ref AppObj
+  AppObj = object
+    window*: sdl.WindowPtr  # Window pointer
+    renderer*: sdl.RendererPtr  # Rendering state pointer
+
+proc initSdl(app: App): bool =
+  # Init SDL
+  if sdl.init(sdl.InitVideo) != SdlSuccess:
+    echo "ERROR: Can't initialize SDL: ", sdl.getError()
+    return false
+
+  # Create window
+  app.window = sdl.createWindow(
+    Title,
+    SDL_WINDOWPOS_CENTERED,
+    SDL_WINDOWPOS_CENTERED,
+    windowW,
+    windowH,
+    WindowFlags)
+  if app.window == nil:
+    echo "ERROR: Can't create window: ", sdl.getError()
+    return false
+
+  # Create renderer
+  app.renderer = sdl.createRenderer(app.window, -1, RendererFlags)
+  if app.renderer == nil:
+    echo "ERROR: Can't create renderer: ", sdl.getError()
+    return false
+
+  echo "SDL initialized successfully"
+  return true
+
+proc exitSdl(app: App) =
+  app.renderer.destroyRenderer()
+  app.window.destroyWindow()
+  sdl.quit()
+  echo "SDL shutdown completed"
+
+proc drawBoardRects(app: App; board: ref Board) =
+  for i in 0..<board[].size.h:
+    for j in 0..<board[].size.w:
+      if board[i][j] == 1:
+        rect.x = (j * CellSize).int32
+        rect.y = (i * CellSize).int32
+        discard app.renderer.fillRect(rect.addr)
+
+proc drawBoard(app: App; board: ref Board; prev: ref Board) =
+  # draw over old cells
+  discard app.renderer.setDrawColor(0x00, 0x00, 0x00, 0xff)
+  drawBoardRects(app, prev)
+
+  # current cells
+  discard app.renderer.setDrawColor(0xff, 0xff, 0xff, 0xff)
+  drawBoardRects(app, board)
+  
+  # show
+  app.renderer.present()
+
+# main #
 
 template intParam(idx: int; default: int): int =
   if paramCount() >= idx:
@@ -28,18 +103,22 @@ template strParam(idx: int; default: string): string =
     default
 
 when isMainModule:
+  var done = false
+  setControlCHook() do:
+    done = true
+
   # parse args
 
   let
     fn = strParam(1, "")
     n = intParam(2, -1)
     t = intParam(3, 0)
-    oi = intParam(4, 0)
-    oj = intParam(5, 0)
+    oj = intParam(4, 0)
+    oi = intParam(5, 0)
 
   # handle args
 
-  var s = newStepper(terminalWidth() div 2, terminalHeight() - 1)
+  var s = newStepper(boardW, boardH)
 
   if fn.len > 0:
     let f = open(fn, fmRead)
@@ -51,14 +130,21 @@ when isMainModule:
       (proc () = sleep(t))
     else:
       (proc () = discard)
-    
+  
+  # init SDL
+
+  var app = App(window: nil, renderer: nil)
+  if not initSdl(app):
+    stderr.writeLine("Failed to initialize SDL")
+    quit(1)
+      
   # loop
 
-  echo s
-  stdout.hideCursor()
-  loop(n) do:
+  app.drawBoard(s.board, s.buf)
+  var c = 0
+  while c != n and not done:
     sleep()
     s.step()
-    stdout.cursorUp(s.size.h)
-    stdout.setCursorXPos(0)
-    echo s
+    app.drawBoard(s.board, s.buf)
+  
+  exitSdl(app)

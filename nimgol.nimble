@@ -11,3 +11,5 @@ bin           = @["nimgol"]
 # Dependencies
 
 requires "nim >= 1.4.2"
+requires "sdl2 >= 2.0.3"
+requires "winim >= 3.6.0"

@@ -6,17 +6,17 @@ import nre
 
 const
   Neighborhood = 1  # 8 neighbors
-  ChDead = ' '
+  ChDead = '.'
   ChAlive = '#'
 
 # types #
 
 type
   Cell = uint8
-  Board = seq[seq[Cell]]
+  Board* = seq[seq[Cell]]
   Stepper* = object
     board*: ref Board
-    buf: ref Board
+    buf*: ref Board
 
 template size*(board: Board): tuple[w, h: int] =
   (board[0].len, board.len)
